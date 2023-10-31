@@ -72,11 +72,13 @@ app.post("/usuarios", async (req, res) => {
     }
 
     const tipo_acesso = "cliente";
-    const hashedSenha = await bcrypt.hash(senha, 10);
+
+    // Não criptografar a senha
+    const senhaSemCriptografia = senha;
 
     const result = await pool.query(
       "INSERT INTO usuarios (nome, email, telefone, senha, tipo_acesso) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [nome, email, telefone, hashedSenha, tipo_acesso]
+      [nome, email, telefone, senhaSemCriptografia, tipo_acesso]
     );
 
     const novoUsuarioId = result.rows[0].idusuarios;
@@ -172,6 +174,40 @@ app.post("/barbeiros/login", async (req, res) => {
     });
 
     res.json({ token, barbeiroId, tipo_acesso: tipoAcesso });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.post("/administradores/login", async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+
+    if (!email || !senha) {
+      return res.status(400).json({ error: "Email e senha são obrigatórios" });
+    }
+
+    const administrador = await pool.query(
+      "SELECT * FROM administradores WHERE email = $1",
+      [email]
+    );
+
+    if (!administrador.rows[0]) {
+      return res.status(401).json({ error: "Credenciais inválidas" });
+    }
+
+    if (senha !== administrador.rows[0].senha) {
+      return res.status(401).json({ error: "Credenciais inválidas" });
+    }
+
+    const administradorId = administrador.rows[0].idadministrador;
+    const tipoAcesso = administrador.rows[0].tipo_acesso;
+    const token = jwt.sign({ administradorId, tipoAcesso }, secretKey, {
+      expiresIn: "1h",
+    });
+
+    res.json({ token, administradorId, tipo_acesso: tipoAcesso });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro interno do servidor" });
@@ -290,6 +326,33 @@ app.get("/agendamentos/usuario/:id", async (req, res) => {
       return res
         .status(404)
         .json({ error: "Nenhum agendamento encontrado para este cliente" });
+    }
+
+    const agendamentos = result.rows;
+    res.json(agendamentos);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.get("/agendamentos/barbeiro/:id", async (req, res) => {
+  const barbeiroId = req.params.id;
+
+  if (!barbeiroId) {
+    return res.status(400).json({ error: "ID do barbeiro não fornecido" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM agendamentos WHERE barbeiro_id = $1",
+      [barbeiroId]
+    );
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: "Nenhum agendamento encontrado para este barbeiro" });
     }
 
     const agendamentos = result.rows;

@@ -22,6 +22,10 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
+app.listen(port, () => {
+  console.log(`Servidor está rodando na porta ${port}`);
+});
+
 app.get("/barbeiros", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM barbeiros");
@@ -36,25 +40,53 @@ app.get("/barbeiros", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor está rodando na porta ${port}`);
-});
+app.post("/adicionar-barbeiro", async (req, res) => {
+  const { nome, fotoperfil, email, telefone, senha, sobre, fotos_trabalhos } =
+    req.body;
 
-app.get("/barbeiros/:id", async (req, res) => {
-  const { id } = req.params;
+  // Certifique-se de que fotos_trabalhos seja um array JSON válido
+  const fotosTrabalhosJSON = JSON.stringify(fotos_trabalhos);
 
   try {
+    const tipo_acesso = "barbeiro";
     const result = await pool.query(
-      "SELECT nome FROM barbeiros WHERE idbarbeiro = $1",
-      [id]
+      "INSERT INTO barbeiros (nome, fotoperfil, email, telefone, senha, tipo_acesso, sobre, fotos_trabalhos) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+      [
+        nome,
+        fotoperfil,
+        email,
+        telefone,
+        senha,
+        tipo_acesso,
+        sobre,
+        fotosTrabalhosJSON,
+      ]
     );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
 
-    if (result.rowCount === 0) {
+app.delete("/barbeiros/:id", async (req, res) => {
+  const barbeiroId = req.params.id;
+
+  try {
+    // Verifica se o barbeiro com o ID fornecido existe antes de tentar excluí-lo
+    const checkBarbeiro = await pool.query(
+      "SELECT * FROM barbeiros WHERE idbarbeiro = $1",
+      [barbeiroId]
+    );
+    if (checkBarbeiro.rowCount === 0) {
       return res.status(404).json({ error: "Barbeiro não encontrado" });
     }
 
-    const { nome } = result.rows[0];
-    res.json({ nome });
+    // Caso exista, prosseguimos com a exclusão
+    await pool.query("DELETE FROM barbeiros WHERE idbarbeiro = $1", [
+      barbeiroId,
+    ]);
+    res.json({ message: `Barbeiro com ID ${barbeiroId} excluído com sucesso` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro interno do servidor" });
@@ -73,7 +105,6 @@ app.post("/usuarios", async (req, res) => {
 
     const tipo_acesso = "cliente";
 
-    // Não criptografar a senha
     const senhaSemCriptografia = senha;
 
     const result = await pool.query(
@@ -208,6 +239,27 @@ app.post("/administradores/login", async (req, res) => {
     });
 
     res.json({ token, administradorId, tipo_acesso: tipoAcesso });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.get("/administradores/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT nome FROM administradores WHERE idadministrador = $1",
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Administrador não encontrado" });
+    }
+
+    const { nome } = result.rows[0];
+    res.json({ nome });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro interno do servidor" });

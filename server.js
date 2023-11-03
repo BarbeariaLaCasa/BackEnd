@@ -480,3 +480,38 @@ app.put("/agendamentos/recusado/:id", async (req, res) => {
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
+
+app.get("/servicos", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM serviços");
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Nenhum serviço encontrado" });
+    }
+    const servicos = result.rows;
+    res.json(servicos);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.put("/servicos/:id", async (req, res) => {
+  const { id } = req.params;
+  const { valor, duração } = req.body;
+
+  try {
+    const result = await pool.query(
+      "UPDATE serviços SET valor = $1, duração = $2 WHERE idserviço = $3",
+      [valor, duração, id]
+    );
+
+    if (result.rowCount === 1) {
+      res.json({ message: "Serviço atualizado com sucesso" });
+    } else {
+      res.status(404).json({ error: "Serviço não encontrado" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});

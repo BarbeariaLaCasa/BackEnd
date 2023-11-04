@@ -515,3 +515,38 @@ app.put("/servicos/:id", async (req, res) => {
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
+
+app.get("/resumo-financeiro", async (req, res) => {
+  try {
+    const query = `
+    SELECT 
+    agendamentos.barbeiro_id,
+    barbeiros.nome AS nomebarbeiro,
+    COUNT(agendamentos.idagendamentos) as totalAgendamentos,
+    AVG(agendamentos.valor) as mediaReceita,
+    SUM(agendamentos.valor) as valorTotal,
+    COUNT(*) FILTER (WHERE agendamentos.forma_pagamento = 'pix') as totalPix,
+    COUNT(*) FILTER (WHERE agendamentos.forma_pagamento = 'cartao') as totalCartao,
+    COUNT(*) FILTER (WHERE agendamentos.forma_pagamento = 'dinheiro') as totalDinheiro
+    FROM agendamentos
+    INNER JOIN barbeiros ON agendamentos.barbeiro_id = barbeiros.idbarbeiro
+    WHERE agendamentos.status = 'aceito'
+    GROUP BY agendamentos.barbeiro_id, barbeiros.nome
+    `;
+
+    const result = await pool.query(query);
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: "Nenhum dado financeiro encontrado" });
+    }
+
+    const resumoFinanceiro = result.rows;
+
+    res.json(resumoFinanceiro);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});

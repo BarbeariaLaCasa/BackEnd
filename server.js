@@ -550,3 +550,19 @@ app.get("/resumo-financeiro", async (req, res) => {
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
+
+app.get("/servicos", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM servicos");
+
+    const servicosComTempo = result.rows.map((servico) => ({
+      ...servico,
+      tempoEstimado: temposEstimados[servico.nome.toLowerCase()] || 0,
+    }));
+
+    res.json(servicosComTempo);
+  } catch (error) {
+    console.error("Erro ao buscar serviços:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});

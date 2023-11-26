@@ -43,8 +43,6 @@ app.get("/barbeiros", async (req, res) => {
 app.post("/adicionar-barbeiro", async (req, res) => {
   const { nome, fotoperfil, email, telefone, senha, sobre, fotos_trabalhos } =
     req.body;
-
-  // Certifique-se de que fotos_trabalhos seja um array JSON válido
   const fotosTrabalhosJSON = JSON.stringify(fotos_trabalhos);
 
   try {
@@ -73,7 +71,6 @@ app.delete("/barbeiros/:id", async (req, res) => {
   const barbeiroId = req.params.id;
 
   try {
-    // Verifica se o barbeiro com o ID fornecido existe antes de tentar excluí-lo
     const checkBarbeiro = await pool.query(
       "SELECT * FROM barbeiros WHERE idbarbeiro = $1",
       [barbeiroId]
@@ -82,7 +79,6 @@ app.delete("/barbeiros/:id", async (req, res) => {
       return res.status(404).json({ error: "Barbeiro não encontrado" });
     }
 
-    // Caso exista, prosseguimos com a exclusão
     await pool.query("DELETE FROM barbeiros WHERE idbarbeiro = $1", [
       barbeiroId,
     ]);
@@ -171,6 +167,29 @@ app.post("/usuarios/login", async (req, res) => {
     });
 
     res.json({ token, userId, tipo_acesso: tipoAcesso });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.get("/barbeiros/:id", async (req, res) => {
+  try {
+    const barbeiroId = req.params.id;
+
+    const result = await pool.query(
+      "SELECT * FROM barbeiros WHERE idbarbeiro = $1",
+      [barbeiroId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Barbeiro não encontrado" });
+    }
+
+    const barbeiro = result.rows[0];
+    const nomeDoBarbeiro = barbeiro.nome;
+
+    res.json({ nome: nomeDoBarbeiro });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro interno do servidor" });
@@ -417,10 +436,9 @@ app.get("/agendamentos/barbeiro/:id", async (req, res) => {
 
 app.put("/agendamentos/:id", async (req, res) => {
   try {
-    const { id } = req.params; // Obtenha o ID do agendamento a ser atualizado
-    const { novoStatus } = req.body; // Obtenha o novo status do corpo da solicitação
+    const { id } = req.params;
+    const { novoStatus } = req.body;
 
-    // Certifique-se de que o novo status seja válido (aceito ou recusado)
     if (novoStatus !== "aceito" && novoStatus !== "recusado") {
       return res.status(400).json({ error: "Novo status inválido" });
     }

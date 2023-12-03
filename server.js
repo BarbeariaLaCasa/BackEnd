@@ -305,6 +305,28 @@ app.get("/buscar-titulo-inicial", async (req, res) => {
   }
 });
 
+app.put("/editar-titulo-inicial", async (req, res) => {
+  const { novoTitulo } = req.body;
+
+  try {
+    const result = await pool.query(
+      "UPDATE administradores SET tituloinicial = $1",
+      [novoTitulo]
+    );
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: "Nenhum título inicial encontrado para editar" });
+    }
+
+    res.json({ mensagem: "Título inicial editado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao editar o título inicial:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
 app.get("/buscar-descricao-inicial", async (req, res) => {
   try {
     const result = await pool.query(
@@ -321,6 +343,28 @@ app.get("/buscar-descricao-inicial", async (req, res) => {
     res.json({ descricao });
   } catch (error) {
     console.error("Erro ao buscar o descrição inicial:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.put("/editar-descricao-inicial", async (req, res) => {
+  const { novaDescricao } = req.body;
+
+  try {
+    const result = await pool.query(
+      "UPDATE administradores SET descricao_inicial = $1",
+      [novaDescricao]
+    );
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: "Nenhuma descrição inicial encontrada para editar" });
+    }
+
+    res.json({ mensagem: "Descrição inicial editada com sucesso" });
+  } catch (error) {
+    console.error("Erro ao editar a descrição inicial:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 });

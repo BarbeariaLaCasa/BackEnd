@@ -305,15 +305,24 @@ app.get("/buscar-titulo-inicial", async (req, res) => {
   }
 });
 
-app.get("/buscar-descricao-inicial", (req, res) => {
-  const query = "SELECT descricao_inicial FROM administradores LIMIT 1";
-  connection.query(query, (error, results) => {
-    if (error) {
-      res.status(500).send("Erro ao buscar a descrição inicial");
-    } else {
-      res.json(results);
+app.get("/buscar-descricao-inicial", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT descricao_inicial FROM administradores"
+    );
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: "Nenhuma descrição inicial encontrado" });
     }
-  });
+
+    const descricao = result.rows[0].descricao_inicial;
+    res.json({ descricao });
+  } catch (error) {
+    console.error("Erro ao buscar o descrição inicial:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
 });
 
 app.get("/verificar-token", (req, res) => {

@@ -285,6 +285,37 @@ app.get("/administradores/:id", async (req, res) => {
   }
 });
 
+app.get("/buscar-titulo-inicial", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT tituloinicial FROM administradores"
+    );
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: "Nenhum título inicial encontrado" });
+    }
+
+    const tituloInicial = result.rows[0].tituloinicial;
+    res.json({ tituloInicial });
+  } catch (error) {
+    console.error("Erro ao buscar o título inicial:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.get("/buscar-descricao-inicial", (req, res) => {
+  const query = "SELECT descricao_inicial FROM administradores LIMIT 1";
+  connection.query(query, (error, results) => {
+    if (error) {
+      res.status(500).send("Erro ao buscar a descrição inicial");
+    } else {
+      res.json(results);
+    }
+  });
+});
+
 app.get("/verificar-token", (req, res) => {
   try {
     const token = req.headers.authorization;

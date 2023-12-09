@@ -599,12 +599,12 @@ app.get("/servicos", async (req, res) => {
 
 app.put("/servicos/:id", async (req, res) => {
   const { id } = req.params;
-  const { valor, duração } = req.body;
+  const { valor, duração, descricaoservico } = req.body;
 
   try {
     const result = await pool.query(
-      "UPDATE serviços SET valor = $1, duração = $2 WHERE idserviço = $3",
-      [valor, duração, id]
+      "UPDATE serviços SET valor = $1, duração = $2, descricaoservico = $3 WHERE idserviço = $4",
+      [valor, duração, descricaoservico, id]
     );
 
     if (result.rowCount === 1) {
@@ -612,6 +612,44 @@ app.put("/servicos/:id", async (req, res) => {
     } else {
       res.status(404).json({ error: "Serviço não encontrado" });
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.post("/adicionar-servico", async (req, res) => {
+  const { nome, valor, duracao, descricaoServico } = req.body;
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO serviços (nome, valor, duração, descricaoServico) VALUES ($1, $2, $3, $4) RETURNING *",
+      [nome, valor, duracao, descricaoServico]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+app.delete("/excluir-servico/:id", async (req, res) => {
+  const servicoId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM serviços WHERE idserviço = $1 RETURNING *",
+      [servicoId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Serviço não encontrado" });
+    }
+
+    res.json({
+      message: "Serviço excluído com sucesso",
+      deletedService: result.rows[0],
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro interno do servidor" });
